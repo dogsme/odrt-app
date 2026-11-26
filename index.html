@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>0DayCat Rome Token (ODRT) — Rome Hadrian</title>
+<style>
+  :root { color-scheme: dark; }
+  body { margin:0; font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif; background:#0b0e14; color:#e6e9ef; }
+  .wrap { max-width: 760px; margin: 0 auto; padding: 40px 20px 64px; }
+  .badge { display:inline-block; padding:4px 10px; border:1px solid #2b3245; border-radius:999px; font-size:12px; color:#9fb0c9; }
+  h1 { font-size: 34px; margin: 16px 0 6px; }
+  .sub { color:#9fb0c9; margin: 0 0 28px; line-height:1.5; }
+  .card { background:#121722; border:1px solid #232b3d; border-radius:14px; padding:18px 20px; margin-bottom:16px; }
+  .grid { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+  .k { font-size:12px; text-transform:uppercase; letter-spacing:.08em; color:#7d8aa3; }
+  .v { font-size:18px; margin-top:4px; word-break:break-all; }
+  .mono { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size:14px; }
+  button { background:#e8b33c; color:#141414; border:0; border-radius:10px; padding:10px 16px; font-weight:600; cursor:pointer; }
+  button:disabled { opacity:.5; cursor:default; }
+  input { width:100%; box-sizing:border-box; background:#0b0e14; border:1px solid #2b3245; border-radius:10px; color:#e6e9ef; padding:10px 12px; margin:6px 0 12px; }
+  a { color:#e8b33c; }
+  .muted { color:#7d8aa3; font-size:13px; }
+  .row { display:flex; gap:10px; align-items:center; flex-wrap:wrap; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <span class="badge">Rome Hadrian testnet · chain 200010</span>
+  <h1>0DayCat Rome Token <span style="color:#e8b33c">(ODRT)</span></h1>
+  <p class="sub">A fixed-supply ERC-20 deployed on Rome Hadrian — the EVM layer running inside Solana.
+  1,000,000 ODRT minted once to the deployer. No mint, no pause, no burn. Built for the Rome Arena builder track.</p>
+
+  <div class="card">
+    <div class="grid">
+      <div><div class="k">Token</div><div class="v" id="tName">…</div></div>
+      <div><div class="k">Symbol</div><div class="v" id="tSymbol">…</div></div>
+      <div><div class="k">Total supply</div><div class="v" id="tSupply">…</div></div>
+      <div><div class="k">Decimals</div><div class="v">18</div></div>
+    </div>
+    <div style="margin-top:14px"><div class="k">Contract</div>
+      <div class="v mono"><a id="tAddr" href="#" target="_blank" rel="noopener">…</a></div></div>
+    <p class="muted" id="liveNote">Reading live state from the Hadrian RPC…</p>
+  </div>
+
+  <div class="card">
+    <div class="row" style="justify-content:space-between">
+      <div><div class="k">Your wallet</div><div class="v mono" id="wAddr">Not connected</div>
+      <div class="muted" id="wBal"></div></div>
+      <button id="btnConnect">Connect wallet</button>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="k">Transfer ODRT</div>
+    <label class="muted">Recipient address</label>
+    <input id="txTo" placeholder="0x…">
+    <label class="muted">Amount (ODRT)</label>
+    <input id="txAmt" type="number" min="0" step="any" placeholder="10">
+    <button id="btnSend" disabled>Send ODRT</button>
+    <p class="muted" id="txNote">Connect a wallet on Rome Hadrian to transfer. Signing happens in your wallet.</p>
+  </div>
+
+  <p class="muted">Contract: <span class="mono">0xfD3D52d07C74c5e623d9aEc3E27F8f221ACaE030</span> ·
+  Explorer: <a href="https://via-hadrian.testnet.romeprotocol.xyz/address/0xfD3D52d07C74c5e623d9aEc3E27F8f221ACaE030" target="_blank" rel="noopener">Via Hadrian</a> ·
+  Testnet only — ODRT has no monetary value.</p>
+</div>
+<script src="app.js"></script>
+</body>
+</html>
