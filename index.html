@@ -3,67 +3,112 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>0DayCat Rome Token (ODRT) — Rome Hadrian</title>
+<title>0DayCat DeFi — ODRT / RUSD on Rome Hadrian</title>
 <style>
   :root { color-scheme: dark; }
+  * { box-sizing: border-box; }
   body { margin:0; font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif; background:#0b0e14; color:#e6e9ef; }
-  .wrap { max-width: 760px; margin: 0 auto; padding: 40px 20px 64px; }
+  .wrap { max-width: 820px; margin: 0 auto; padding: 32px 18px 64px; }
   .badge { display:inline-block; padding:4px 10px; border:1px solid #2b3245; border-radius:999px; font-size:12px; color:#9fb0c9; }
-  h1 { font-size: 34px; margin: 16px 0 6px; }
-  .sub { color:#9fb0c9; margin: 0 0 28px; line-height:1.5; }
+  h1 { font-size: 30px; margin: 14px 0 4px; }
+  .sub { color:#9fb0c9; margin: 0 0 22px; line-height:1.5; }
+  .stats { display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:10px; margin-bottom:18px; }
+  .stat { background:#121722; border:1px solid #232b3d; border-radius:12px; padding:12px 14px; }
+  .k { font-size:11px; text-transform:uppercase; letter-spacing:.08em; color:#7d8aa3; }
+  .v { font-size:17px; margin-top:3px; word-break:break-all; }
+  .tabs { display:flex; gap:8px; flex-wrap:wrap; margin-bottom:14px; }
+  .tab { background:#121722; border:1px solid #2b3245; color:#c8d2e2; border-radius:999px; padding:8px 16px; cursor:pointer; font-weight:600; }
+  .tab.on { background:#e8b33c; color:#141414; border-color:#e8b33c; }
   .card { background:#121722; border:1px solid #232b3d; border-radius:14px; padding:18px 20px; margin-bottom:16px; }
-  .grid { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
-  .k { font-size:12px; text-transform:uppercase; letter-spacing:.08em; color:#7d8aa3; }
-  .v { font-size:18px; margin-top:4px; word-break:break-all; }
-  .mono { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size:14px; }
-  button { background:#e8b33c; color:#141414; border:0; border-radius:10px; padding:10px 16px; font-weight:600; cursor:pointer; }
-  button:disabled { opacity:.5; cursor:default; }
-  input { width:100%; box-sizing:border-box; background:#0b0e14; border:1px solid #2b3245; border-radius:10px; color:#e6e9ef; padding:10px 12px; margin:6px 0 12px; }
+  label { display:block; font-size:13px; color:#7d8aa3; margin:10px 0 4px; }
+  input, select { width:100%; background:#0b0e14; border:1px solid #2b3245; border-radius:10px; color:#e6e9ef; padding:10px 12px; font-size:15px; }
+  button.act { background:#e8b33c; color:#141414; border:0; border-radius:10px; padding:11px 18px; font-weight:700; cursor:pointer; margin-top:14px; width:100%; }
+  button.act:disabled { opacity:.45; cursor:default; }
+  button.ghost { background:transparent; border:1px solid #2b3245; color:#e6e9ef; border-radius:10px; padding:10px 16px; font-weight:600; cursor:pointer; }
+  .muted { color:#7d8aa3; font-size:13px; line-height:1.5; }
+  .mono { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size:13px; }
   a { color:#e8b33c; }
-  .muted { color:#7d8aa3; font-size:13px; }
-  .row { display:flex; gap:10px; align-items:center; flex-wrap:wrap; }
+  .row { display:flex; gap:10px; align-items:center; justify-content:space-between; flex-wrap:wrap; }
+  .hidden { display:none; }
+  .note { min-height:20px; }
 </style>
 </head>
 <body>
 <div class="wrap">
-  <span class="badge">Rome Hadrian testnet · chain 200010</span>
-  <h1>0DayCat Rome Token <span style="color:#e8b33c">(ODRT)</span></h1>
-  <p class="sub">A fixed-supply ERC-20 deployed on Rome Hadrian — the EVM layer running inside Solana.
-  1,000,000 ODRT minted once to the deployer. No mint, no pause, no burn. Built for the Rome Arena builder track.</p>
+  <span class="badge">Rome Hadrian testnet · chain 200010 · testnet only — no real value</span>
+  <h1>0DayCat DeFi</h1>
+  <p class="sub">A full DeFi suite on Rome Hadrian, the EVM running inside Solana: an AMM for ODRT/RUSD,
+  a staking vault, and a faucet. All state below is read live from the Hadrian RPC.</p>
 
-  <div class="card">
-    <div class="grid">
-      <div><div class="k">Token</div><div class="v" id="tName">…</div></div>
-      <div><div class="k">Symbol</div><div class="v" id="tSymbol">…</div></div>
-      <div><div class="k">Total supply</div><div class="v" id="tSupply">…</div></div>
-      <div><div class="k">Decimals</div><div class="v">18</div></div>
-    </div>
-    <div style="margin-top:14px"><div class="k">Contract</div>
-      <div class="v mono"><a id="tAddr" href="#" target="_blank" rel="noopener">…</a></div></div>
-    <p class="muted" id="liveNote">Reading live state from the Hadrian RPC…</p>
+  <div class="stats">
+    <div class="stat"><div class="k">ODRT price</div><div class="v" id="sPrice">…</div></div>
+    <div class="stat"><div class="k">Pool reserves</div><div class="v" id="sReserves">…</div></div>
+    <div class="stat"><div class="k">Total staked</div><div class="v" id="sStaked">…</div></div>
+    <div class="stat"><div class="k">Reward pool</div><div class="v" id="sRewards">…</div></div>
   </div>
 
   <div class="card">
-    <div class="row" style="justify-content:space-between">
-      <div><div class="k">Your wallet</div><div class="v mono" id="wAddr">Not connected</div>
+    <div class="row">
+      <div><div class="k">Wallet</div><div class="v mono" id="wAddr">Not connected</div>
       <div class="muted" id="wBal"></div></div>
-      <button id="btnConnect">Connect wallet</button>
+      <button class="ghost" id="btnConnect">Connect wallet</button>
     </div>
   </div>
 
-  <div class="card">
-    <div class="k">Transfer ODRT</div>
-    <label class="muted">Recipient address</label>
-    <input id="txTo" placeholder="0x…">
-    <label class="muted">Amount (ODRT)</label>
-    <input id="txAmt" type="number" min="0" step="any" placeholder="10">
-    <button id="btnSend" disabled>Send ODRT</button>
-    <p class="muted" id="txNote">Connect a wallet on Rome Hadrian to transfer. Signing happens in your wallet.</p>
+  <div class="tabs">
+    <button class="tab on" data-tab="swap">Swap</button>
+    <button class="tab" data-tab="pool">Pool</button>
+    <button class="tab" data-tab="stake">Stake</button>
+    <button class="tab" data-tab="faucet">Faucet</button>
+    <button class="tab" data-tab="contracts">Contracts</button>
   </div>
 
-  <p class="muted">Contract: <span class="mono">0xfD3D52d07C74c5e623d9aEc3E27F8f221ACaE030</span> ·
-  Explorer: <a href="https://via-hadrian.testnet.romeprotocol.xyz/address/0xfD3D52d07C74c5e623d9aEc3E27F8f221ACaE030" target="_blank" rel="noopener">Via Hadrian</a> ·
-  Testnet only — ODRT has no monetary value.</p>
+  <div class="card" id="tab-swap">
+    <div class="k">Swap · 0.3% fee</div>
+    <label>From</label>
+    <div class="row"><select id="swFrom" style="max-width:130px"><option value="A">ODRT</option><option value="B">RUSD</option></select>
+    <input id="swIn" type="number" min="0" step="any" placeholder="0.0" style="flex:1"></div>
+    <label>To (estimated)</label>
+    <input id="swOut" type="text" readonly placeholder="—">
+    <button class="act" id="btnSwap" disabled>Swap</button>
+    <p class="muted note" id="swNote"></p>
+  </div>
+
+  <div class="card hidden" id="tab-pool">
+    <div class="k">Liquidity · ODRT / RUSD</div>
+    <label>Add ODRT</label><input id="lpA" type="number" min="0" step="any" placeholder="0.0">
+    <label>Add RUSD</label><input id="lpB" type="number" min="0" step="any" placeholder="0.0">
+    <button class="act" id="btnAddLp" disabled>Add liquidity</button>
+    <label style="margin-top:18px">Your LP shares: <span id="lpShares">—</span></label>
+    <label>Remove shares</label><input id="lpOut" type="number" min="0" step="any" placeholder="0.0">
+    <button class="act" id="btnRemoveLp" disabled>Remove liquidity</button>
+    <p class="muted note" id="lpNote"></p>
+  </div>
+
+  <div class="card hidden" id="tab-stake">
+    <div class="k">Stake ODRT · rewards 0.001 ODRT/sec split pro-rata</div>
+    <div class="muted" id="stakeInfo">Your stake: — · Pending rewards: —</div>
+    <label>Stake amount</label><input id="stAmt" type="number" min="0" step="any" placeholder="0.0">
+    <button class="act" id="btnStake" disabled>Stake</button>
+    <label>Unstake amount</label><input id="unAmt" type="number" min="0" step="any" placeholder="0.0">
+    <button class="act" id="btnUnstake" disabled>Unstake</button>
+    <button class="act" id="btnClaimRewards" disabled>Claim rewards</button>
+    <p class="muted note" id="stNote"></p>
+  </div>
+
+  <div class="card hidden" id="tab-faucet">
+    <div class="k">Faucet · 100 tokens per token, once per 24h</div>
+    <p class="muted" id="faucetInfo">Faucet balance: —</p>
+    <button class="act" id="btnClaimO" disabled>Claim 100 ODRT</button>
+    <button class="act" id="btnClaimR" disabled>Claim 100 RUSD</button>
+    <p class="muted note" id="faNote"></p>
+  </div>
+
+  <div class="card hidden" id="tab-contracts">
+    <div class="k">Contracts on Rome Hadrian</div>
+    <p class="muted mono" id="contractList"></p>
+    <p class="muted">Built for the <a href="https://arena.mainnet.romeprotocol.xyz/apps/0daycat-rome-token" target="_blank" rel="noopener">Rome Arena</a> builder track. Source: <a href="https://github.com/dogsme/odrt-app" target="_blank" rel="noopener">github.com/dogsme/odrt-app</a></p>
+  </div>
 </div>
 <script src="app.js"></script>
 </body>
