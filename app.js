@@ -157,3 +157,75 @@ $("contractList").innerHTML = [
 
 refresh();
 setInterval(refresh, 15000);
+
+
+/* ---- v3 presentation extras: rain backdrop, live block, session price sparkline.
+   Additive only: reads the same RPC through the helpers above; never sends transactions. ---- */
+(function () {
+  const reduced = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+  // Rain backdrop
+  const cv = document.getElementById("rain");
+  if (cv && !reduced) {
+    const ctx = cv.getContext("2d");
+    let W = 0, H = 0, drops = [], running = true;
+    function size() {
+      W = cv.width = window.innerWidth; H = cv.height = window.innerHeight;
+      const n = Math.min(130, Math.floor(W / 11));
+      drops = Array.from({ length: n }, () => ({
+        x: Math.random() * W, y: Math.random() * H,
+        l: 9 + Math.random() * 16, s: 9 + Math.random() * 13, o: 0.05 + Math.random() * 0.16
+      }));
+    }
+    size(); window.addEventListener("resize", size);
+    document.addEventListener("visibilitychange", () => { running = !document.hidden; if (running) requestAnimationFrame(tick); });
+    function tick() {
+      if (!running) return;
+      ctx.clearRect(0, 0, W, H);
+      ctx.lineWidth = 1; ctx.lineCap = "round";
+      for (const d of drops) {
+        ctx.strokeStyle = "rgba(140,180,255," + d.o + ")";
+        ctx.beginPath(); ctx.moveTo(d.x, d.y); ctx.lineTo(d.x - 1.5, d.y + d.l); ctx.stroke();
+        d.y += d.s; d.x -= 0.6;
+        if (d.y > H) { d.y = -20; d.x = Math.random() * W; }
+      }
+      requestAnimationFrame(tick);
+    }
+    requestAnimationFrame(tick);
+  }
+
+  // Live block height + session price history sparkline
+  const hist = [];
+  function drawSpark() {
+    const c = document.getElementById("spark");
+    if (!c || hist.length < 2) return;
+    const g = c.getContext("2d"), w = c.width, h = c.height;
+    g.clearRect(0, 0, w, h);
+    const min = Math.min.apply(null, hist), max = Math.max.apply(null, hist), span = (max - min) || 1;
+    const px = (i) => (i / (hist.length - 1)) * (w - 6) + 3;
+    const py = (v) => h - 5 - ((v - min) / span) * (h - 12);
+    const grad = g.createLinearGradient(0, 0, w, 0);
+    grad.addColorStop(0, "#7c5cff"); grad.addColorStop(0.6, "#3ae2ff"); grad.addColorStop(1, "#ff5ca8");
+    g.beginPath();
+    hist.forEach((v, i) => { i ? g.lineTo(px(i), py(v)) : g.moveTo(px(i), py(v)); });
+    g.strokeStyle = grad; g.lineWidth = 2; g.lineJoin = "round"; g.stroke();
+    g.lineTo(px(hist.length - 1), h); g.lineTo(px(0), h); g.closePath();
+    const fill = g.createLinearGradient(0, 0, 0, h);
+    fill.addColorStop(0, "rgba(58,226,255,.20)"); fill.addColorStop(1, "rgba(58,226,255,0)");
+    g.fillStyle = fill; g.fill();
+  }
+  async function extras() {
+    try {
+      const blk = await rpc("eth_blockNumber", []);
+      const el = document.getElementById("sBlock");
+      if (el) el.textContent = Number(BigInt(blk)).toLocaleString("en-US");
+    } catch (e) { /* skip this tick */ }
+    try {
+      const [rA, rB] = await Promise.all([call(AMM, S.resA), call(AMM, S.resB)]);
+      const ra = Number(BigInt(rA)), rb = Number(BigInt(rB));
+      if (ra > 0) { hist.push(rb / ra); if (hist.length > 48) hist.shift(); drawSpark(); }
+    } catch (e) { /* skip this tick */ }
+  }
+  extras();
+  setInterval(extras, 15000);
+})();
