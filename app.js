@@ -159,22 +159,26 @@ refresh();
 setInterval(refresh, 15000);
 
 
-/* ---- v3 presentation extras: rain backdrop, live block, session price sparkline.
-   Additive only: reads the same RPC through the helpers above; never sends transactions. ---- */
+/* ---- v4 presentation extras: rain + lightning backdrop, live chart, swap helpers,
+   pool position, stake share, faucet cooldowns. Additive only: read-only RPC calls
+   through the helpers above; never sends transactions. ---- */
 (function () {
   const reduced = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  const fmtN = (n, d) => n.toLocaleString("en-US", { maximumFractionDigits: d == null ? 4 : d });
+  const LASTCLAIM = "0x31ff6327"; // Faucet.lastClaim(address,address), token => user, from src/Faucet.sol
+  const COOLDOWN = 86400; // Faucet.COOLDOWN = 24 hours, from src/Faucet.sol
 
-  // Rain backdrop
+  // Rain backdrop + occasional lightning
   const cv = document.getElementById("rain");
   if (cv && !reduced) {
     const ctx = cv.getContext("2d");
     let W = 0, H = 0, drops = [], running = true;
     function size() {
       W = cv.width = window.innerWidth; H = cv.height = window.innerHeight;
-      const n = Math.min(130, Math.floor(W / 11));
+      const n = Math.min(150, Math.floor(W / 10));
       drops = Array.from({ length: n }, () => ({
         x: Math.random() * W, y: Math.random() * H,
-        l: 9 + Math.random() * 16, s: 9 + Math.random() * 13, o: 0.05 + Math.random() * 0.16
+        l: 9 + Math.random() * 17, s: 9 + Math.random() * 14, o: 0.05 + Math.random() * 0.17
       }));
     }
     size(); window.addEventListener("resize", size);
@@ -192,40 +196,194 @@ setInterval(refresh, 15000);
       requestAnimationFrame(tick);
     }
     requestAnimationFrame(tick);
+    const fl = document.getElementById("flash");
+    if (fl) {
+      fl.style.transition = "opacity .1s";
+      (function bolt() {
+        setTimeout(() => {
+          if (!document.hidden) {
+            fl.style.opacity = ".15";
+            setTimeout(() => { fl.style.opacity = "0"; }, 110);
+            setTimeout(() => { fl.style.opacity = ".09"; }, 240);
+            setTimeout(() => { fl.style.opacity = "0"; }, 360);
+          }
+          bolt();
+        }, 7000 + Math.random() * 9000);
+      })();
+    }
   }
 
-  // Live block height + session price history sparkline
+  // Price history, sampled every 5s from live reserves; drives the sparkline and the big chart
   const hist = [];
-  function drawSpark() {
-    const c = document.getElementById("spark");
-    if (!c || hist.length < 2) return;
-    const g = c.getContext("2d"), w = c.width, h = c.height;
-    g.clearRect(0, 0, w, h);
-    const min = Math.min.apply(null, hist), max = Math.max.apply(null, hist), span = (max - min) || 1;
-    const px = (i) => (i / (hist.length - 1)) * (w - 6) + 3;
-    const py = (v) => h - 5 - ((v - min) / span) * (h - 12);
-    const grad = g.createLinearGradient(0, 0, w, 0);
+  function line(ctx, w, h, data, padL, padR, padT, padB, grid) {
+    const min = Math.min.apply(null, data), max = Math.max.apply(null, data), span = (max - min) || 1;
+    const iw = w - padL - padR, ih = h - padT - padB;
+    const px = (i) => padL + (i / (data.length - 1)) * iw;
+    const py = (v) => padT + (1 - (v - min) / span) * ih;
+    if (grid) {
+      ctx.strokeStyle = "rgba(148,163,255,.13)"; ctx.lineWidth = 1;
+      for (let gLine = 0; gLine <= 4; gLine++) {
+        const y = padT + (ih / 4) * gLine;
+        ctx.beginPath(); ctx.moveTo(padL, y); ctx.lineTo(w - padR, y); ctx.stroke();
+      }
+    }
+    const grad = ctx.createLinearGradient(0, 0, w, 0);
     grad.addColorStop(0, "#7c5cff"); grad.addColorStop(0.6, "#3ae2ff"); grad.addColorStop(1, "#ff5ca8");
-    g.beginPath();
-    hist.forEach((v, i) => { i ? g.lineTo(px(i), py(v)) : g.moveTo(px(i), py(v)); });
-    g.strokeStyle = grad; g.lineWidth = 2; g.lineJoin = "round"; g.stroke();
-    g.lineTo(px(hist.length - 1), h); g.lineTo(px(0), h); g.closePath();
-    const fill = g.createLinearGradient(0, 0, 0, h);
+    ctx.beginPath();
+    data.forEach((v, i) => { i ? ctx.lineTo(px(i), py(v)) : ctx.moveTo(px(i), py(v)); });
+    ctx.strokeStyle = grad; ctx.lineWidth = 2; ctx.lineJoin = "round"; ctx.stroke();
+    ctx.lineTo(px(data.length - 1), h - padB); ctx.lineTo(px(0), h - padB); ctx.closePath();
+    const fill = ctx.createLinearGradient(0, 0, 0, h);
     fill.addColorStop(0, "rgba(58,226,255,.20)"); fill.addColorStop(1, "rgba(58,226,255,0)");
-    g.fillStyle = fill; g.fill();
+    ctx.fillStyle = fill; ctx.fill();
+    const lx = px(data.length - 1), ly = py(data[data.length - 1]);
+    ctx.beginPath(); ctx.arc(lx, ly, 3.5, 0, Math.PI * 2);
+    ctx.fillStyle = "#3ae2ff"; ctx.shadowColor = "#3ae2ff"; ctx.shadowBlur = 10; ctx.fill(); ctx.shadowBlur = 0;
+    return { min, max };
   }
-  async function extras() {
+  function drawCharts() {
+    if (hist.length < 2) return;
+    const spark = document.getElementById("spark");
+    if (spark) {
+      const g = spark.getContext("2d");
+      g.clearRect(0, 0, spark.width, spark.height);
+      line(g, spark.width, spark.height, hist.slice(-48), 3, 3, 5, 5, false);
+    }
+    const chart = document.getElementById("chart");
+    if (chart) {
+      const g = chart.getContext("2d");
+      g.clearRect(0, 0, chart.width, chart.height);
+      const mm = line(g, chart.width, chart.height, hist, 6, 10, 10, 8, true);
+      const set = (id, v) => { const e = document.getElementById(id); if (e) e.textContent = v; };
+      set("chNow", hist[hist.length - 1].toFixed(4) + " RUSD");
+      set("chMax", mm.max.toFixed(4));
+      set("chMin", mm.min.toFixed(4));
+    }
+  }
+  async function sample() {
+    try {
+      const [rA, rB] = await Promise.all([call(AMM, S.resA), call(AMM, S.resB)]);
+      const ra = Number(BigInt(rA)), rb = Number(BigInt(rB));
+      if (ra > 0) { hist.push(rb / ra); if (hist.length > 240) hist.shift(); drawCharts(); }
+    } catch (e) { /* skip this tick */ }
+  }
+  sample();
+  setInterval(sample, 5000);
+
+  // Live block height
+  async function blockTick() {
     try {
       const blk = await rpc("eth_blockNumber", []);
       const el = document.getElementById("sBlock");
       if (el) el.textContent = Number(BigInt(blk)).toLocaleString("en-US");
     } catch (e) { /* skip this tick */ }
-    try {
-      const [rA, rB] = await Promise.all([call(AMM, S.resA), call(AMM, S.resB)]);
-      const ra = Number(BigInt(rA)), rb = Number(BigInt(rB));
-      if (ra > 0) { hist.push(rb / ra); if (hist.length > 48) hist.shift(); drawSpark(); }
-    } catch (e) { /* skip this tick */ }
   }
-  extras();
-  setInterval(extras, 15000);
+  blockTick();
+  setInterval(blockTick, 15000);
+
+  // Nav connect button mirrors the wallet card button
+  const navBtn = document.getElementById("navConnect"), mainBtn = document.getElementById("btnConnect");
+  if (navBtn && mainBtn) {
+    navBtn.addEventListener("click", () => mainBtn.click());
+    setInterval(() => { navBtn.textContent = mainBtn.textContent; }, 1000);
+  }
+
+  // Swap helpers: From-token balance label, percent buttons, flip
+  async function fromBalance() {
+    if (!account) return null;
+    const tok = document.getElementById("swFrom").value === "A" ? ODRT : RUSD;
+    const bal = await call(tok, S.balOf + encAddr(account));
+    return { bal: BigInt(bal), sym: tok === ODRT ? "ODRT" : "RUSD" };
+  }
+  async function balLabel() {
+    const el = document.getElementById("swBalFrom");
+    if (!el) return;
+    if (!account) { el.textContent = "Balance: —"; return; }
+    try {
+      const r = await fromBalance();
+      if (r) el.textContent = "Balance: " + fmt(r.bal.toString()) + " " + r.sym;
+    } catch (e) { /* skip */ }
+  }
+  document.querySelectorAll(".pctbtn").forEach((b) => b.addEventListener("click", async () => {
+    if (!account) return;
+    try {
+      const r = await fromBalance();
+      if (!r) return;
+      const v = (Number(r.bal) / 1e18) * (Number(b.dataset.p) / 100);
+      const inp = document.getElementById("swIn");
+      inp.value = v > 0 ? String(parseFloat(v.toFixed(6))) : "";
+      inp.dispatchEvent(new Event("input", { bubbles: true }));
+    } catch (e) { /* skip */ }
+  }));
+  const flip = document.getElementById("btnFlip");
+  if (flip) flip.addEventListener("click", () => {
+    const sel = document.getElementById("swFrom"), inp = document.getElementById("swIn"), out = document.getElementById("swOut");
+    const est = parseFloat(out.value);
+    sel.value = sel.value === "A" ? "B" : "A";
+    if (isFinite(est) && est > 0) inp.value = String(parseFloat(est.toFixed(6)));
+    sel.dispatchEvent(new Event("change", { bubbles: true }));
+    inp.dispatchEvent(new Event("input", { bubbles: true }));
+    balLabel();
+  });
+  document.getElementById("swFrom").addEventListener("change", balLabel);
+
+  // Pool position + stake share + faucet cooldown anchors, refreshed every 15s when connected
+  let nextO = 0, nextR = 0;
+  async function accountExtras() {
+    if (!account) return;
+    try {
+      const [sh, tsh, rA, rB] = await Promise.all([
+        call(AMM, S.shares + encAddr(account)), call(AMM, S.totalShares),
+        call(AMM, S.resA), call(AMM, S.resB)]);
+      const el = document.getElementById("lpPosInfo");
+      if (el) {
+        const tshN = Number(BigInt(tsh)), shN = Number(BigInt(sh));
+        if (tshN > 0 && shN > 0) {
+          const f = shN / tshN;
+          el.textContent = "Pool share: " + (f * 100).toFixed(2) + "% · worth about " +
+            fmtN(f * Number(BigInt(rA)) / 1e18) + " ODRT + " + fmtN(f * Number(BigInt(rB)) / 1e18) + " RUSD at current reserves";
+        } else {
+          el.textContent = "You hold no LP shares yet. Add liquidity to open a position.";
+        }
+      }
+    } catch (e) { /* skip */ }
+    try {
+      const [usr, tot] = await Promise.all([call(VAULT, S.users + encAddr(account)), call(VAULT, S.totalStaked)]);
+      const el = document.getElementById("stExtra");
+      if (el) {
+        const mine = Number(BigInt("0x" + usr.slice(2, 66))) / 1e18, totN = Number(BigInt(tot)) / 1e18;
+        if (mine > 0 && totN > 0) {
+          const share = mine / totN;
+          el.textContent = "Vault share: " + (share * 100).toFixed(2) + "% · your reward stream at the current split is about " +
+            fmtN(0.001 * share * 86400, 2) + " ODRT per day";
+        } else { el.textContent = ""; }
+      }
+    } catch (e) { /* skip */ }
+    try {
+      const [lO, lR] = await Promise.all([
+        call(FAUCET, LASTCLAIM + encAddr(ODRT) + encAddr(account)),
+        call(FAUCET, LASTCLAIM + encAddr(RUSD) + encAddr(account))]);
+      nextO = Number(BigInt(lO)) + COOLDOWN;
+      nextR = Number(BigInt(lR)) + COOLDOWN;
+    } catch (e) { /* skip */ }
+    balLabel();
+  }
+  setInterval(accountExtras, 15000);
+
+  // Faucet countdown text, ticking every second from the anchored read times
+  function cdText(next) {
+    const left = next - Math.floor(Date.now() / 1000);
+    if (left <= 0) return "ready to claim";
+    const h = String(Math.floor(left / 3600)).padStart(2, "0"),
+      m = String(Math.floor((left % 3600) / 60)).padStart(2, "0"),
+      s = String(left % 60).padStart(2, "0");
+    return "next claim in " + h + ":" + m + ":" + s;
+  }
+  setInterval(() => {
+    const el = document.getElementById("faCd");
+    if (!el) return;
+    if (!account) { el.textContent = "Connect a wallet to see your claim cooldowns."; return; }
+    if (!nextO && !nextR) { el.textContent = "Reading your cooldowns…"; return; }
+    el.textContent = "ODRT: " + cdText(nextO) + " · RUSD: " + cdText(nextR);
+  }, 1000);
 })();

@@ -33,9 +33,23 @@
       var(--bg);
     color: var(--txt);
     min-height: 100vh;
+    overflow-x: hidden;
   }
   #rain { position: fixed; inset: 0; width: 100%; height: 100%; z-index: 0; opacity: .5; pointer-events: none; }
-  .wrap { position: relative; z-index: 1; max-width: 880px; margin: 0 auto; padding: 40px 18px 72px; }
+  #flash { position: fixed; inset: 0; z-index: 1; pointer-events: none; opacity: 0;
+    background: radial-gradient(1000px 500px at 50% -10%, rgba(190,210,255,.85), rgba(140,160,255,.25) 55%, transparent 75%); }
+  #skyline { position: fixed; left: 0; right: 0; bottom: 0; width: 100%; height: 190px; z-index: 0; pointer-events: none; opacity: .8; }
+  .wrap { position: relative; z-index: 2; max-width: 920px; margin: 0 auto; padding: 22px 18px 120px; }
+  nav {
+    display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap;
+    padding: 10px 14px; border: 1px solid var(--line); border-radius: 16px;
+    background: rgba(9,11,22,.62); backdrop-filter: blur(12px); margin-bottom: 34px;
+  }
+  .logo { display: flex; align-items: center; gap: 10px; font-family: "Space Grotesk", sans-serif; font-weight: 700; font-size: 17px; }
+  .logo .mark { width: 30px; height: 30px; border-radius: 9px; background: var(--grad); display: grid; place-items: center; color: #0a0c18; font-size: 15px; box-shadow: 0 6px 18px rgba(124,92,255,.5); }
+  .navlinks { display: flex; align-items: center; gap: 16px; font-size: 13.5px; font-weight: 500; }
+  .navlinks a { color: var(--muted); }
+  .navlinks a:hover { color: var(--txt); text-decoration: none; }
   .badge {
     display: inline-flex; align-items: center; gap: 8px;
     padding: 5px 12px; border: 1px solid var(--line); border-radius: 999px;
@@ -46,11 +60,11 @@
   @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: .35; } }
   h1 {
     font-family: "Space Grotesk", "Inter", sans-serif;
-    font-size: clamp(42px, 7vw, 64px); line-height: 1.02; letter-spacing: -.01em;
-    margin: 20px 0 10px; font-weight: 700;
+    font-size: clamp(46px, 8vw, 74px); line-height: 1.0; letter-spacing: -.015em;
+    margin: 22px 0 12px; font-weight: 700;
   }
   h1 .grad { background: var(--grad); -webkit-background-clip: text; background-clip: text; color: transparent; }
-  .sub { color: var(--muted); margin: 0 0 26px; line-height: 1.65; font-size: 15.5px; max-width: 620px; }
+  .sub { color: var(--muted); margin: 0 0 28px; line-height: 1.65; font-size: 16px; max-width: 640px; }
   .stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(158px, 1fr)); gap: 12px; margin-bottom: 16px; }
   .stat {
     background: var(--panel); border: 1px solid var(--line); border-radius: 16px;
@@ -61,13 +75,16 @@
   @media (max-width: 560px) { .stat.wide { grid-column: span 1; } }
   .k { font-size: 11px; text-transform: uppercase; letter-spacing: .12em; color: var(--muted); font-weight: 600; }
   .v { font-size: 19px; margin-top: 5px; font-weight: 600; font-family: "Space Grotesk", sans-serif; word-break: break-word; }
-  .v small { font-size: 12px; color: var(--muted); font-family: "Inter", sans-serif; font-weight: 500; }
   #spark { display: block; width: 100%; height: 44px; margin-top: 8px; }
   .card {
     background: var(--panel); border: 1px solid var(--line); border-radius: 20px;
     padding: 20px 22px; margin-bottom: 16px; backdrop-filter: blur(12px);
     box-shadow: inset 0 1px 0 rgba(255,255,255,.06), 0 18px 44px rgba(0,0,0,.38);
   }
+  .charthead { display: flex; justify-content: space-between; align-items: baseline; flex-wrap: wrap; gap: 8px; }
+  .chartvals { font-family: "JetBrains Mono", monospace; font-size: 12.5px; color: var(--muted); }
+  .chartvals b { color: var(--txt); font-weight: 600; }
+  #chart { display: block; width: 100%; height: 190px; margin-top: 10px; }
   .wallet { display: flex; gap: 12px; align-items: center; justify-content: space-between; flex-wrap: wrap; }
   .tabs {
     display: flex; gap: 6px; flex-wrap: nowrap; overflow-x: auto; margin-bottom: 16px;
@@ -100,15 +117,29 @@
   button.act:disabled { opacity: .4; cursor: default; box-shadow: none; }
   button.ghost {
     background: var(--panel-strong); border: 1px solid var(--line); color: var(--txt); border-radius: 999px;
-    padding: 10px 20px; font-weight: 600; cursor: pointer; font-family: "Inter", sans-serif;
+    padding: 9px 18px; font-weight: 600; cursor: pointer; font-family: "Inter", sans-serif; font-size: 13.5px;
     transition: border-color .2s, box-shadow .2s;
   }
   button.ghost:hover { border-color: var(--cyan); box-shadow: 0 0 0 3px rgba(58,226,255,.18); }
   .swaprow { display: flex; gap: 10px; align-items: stretch; }
   .swaprow select { max-width: 132px; font-weight: 700; }
+  .balrow { display: flex; justify-content: space-between; align-items: center; gap: 10px; margin-top: 8px; flex-wrap: wrap; }
+  .balrow .bal { font-size: 12.5px; color: var(--muted); font-family: "JetBrains Mono", monospace; }
+  .pcts { display: flex; gap: 6px; }
+  .pctbtn {
+    background: rgba(255,255,255,.06); border: 1px solid var(--line); color: var(--muted); border-radius: 999px;
+    padding: 3px 11px; font-size: 12px; font-weight: 600; cursor: pointer; font-family: "Inter", sans-serif;
+  }
+  .pctbtn:hover { color: var(--txt); border-color: var(--cyan); }
+  .flipwrap { display: flex; justify-content: center; margin: 10px 0 0; }
+  #btnFlip {
+    width: 38px; height: 38px; border-radius: 50%; border: 1px solid var(--line); cursor: pointer;
+    background: rgba(10,12,24,.85); color: var(--cyan); font-size: 17px; line-height: 1;
+    box-shadow: 0 6px 18px rgba(0,0,0,.4); transition: transform .25s, border-color .2s;
+  }
+  #btnFlip:hover { transform: rotate(180deg); border-color: var(--cyan); }
   .divider { display: flex; align-items: center; gap: 12px; margin: 16px 0 2px; color: var(--muted); font-size: 12px; letter-spacing: .1em; text-transform: uppercase; }
   .divider::before, .divider::after { content: ""; flex: 1; height: 1px; background: var(--line); }
-  .divider .arr { font-size: 16px; color: var(--cyan); letter-spacing: 0; }
   .muted { color: var(--muted); font-size: 13.5px; line-height: 1.6; }
   .mono { font-family: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 13px; }
   a { color: var(--cyan); text-decoration: none; }
@@ -116,14 +147,33 @@
   .hidden { display: none; }
   .note { min-height: 22px; margin: 12px 0 0; font-size: 13.5px; color: var(--muted); }
   .note a { font-family: "JetBrains Mono", monospace; font-size: 12.5px; }
-  .contracts p { margin: 8px 0; }
   .foot { margin-top: 26px; text-align: center; color: var(--muted); font-size: 13px; line-height: 1.7; }
   @media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } html { scroll-behavior: auto; } }
 </style>
 </head>
 <body>
 <canvas id="rain"></canvas>
+<div id="flash"></div>
+<svg id="skyline" viewBox="0 0 1440 190" preserveAspectRatio="none" aria-hidden="true">
+  <path fill="#0a0d1d" d="M0,190 L0,120 L60,120 L60,80 L120,80 L120,140 L190,140 L190,55 L260,55 L260,110 L330,110 L330,70 L410,70 L410,150 L480,150 L480,40 L560,40 L560,100 L640,100 L640,65 L720,65 L720,135 L800,135 L800,85 L880,85 L880,150 L950,150 L950,50 L1030,50 L1030,105 L1110,105 L1110,75 L1190,75 L1190,145 L1260,145 L1260,95 L1340,95 L1340,125 L1440,125 L1440,190 Z"/>
+  <g fill="#ffd97a" opacity=".75">
+    <rect x="205" y="70" width="5" height="7"/><rect x="222" y="88" width="5" height="7"/><rect x="498" y="58" width="5" height="7"/><rect x="516" y="76" width="5" height="7"/><rect x="966" y="66" width="5" height="7"/><rect x="990" y="84" width="5" height="7"/><rect x="90" y="94" width="5" height="7"/><rect x="660" y="80" width="5" height="7"/><rect x="1210" y="90" width="5" height="7"/><rect x="352" y="86" width="5" height="7"/><rect x="820" y="100" width="5" height="7"/><rect x="1130" y="90" width="5" height="7"/>
+  </g>
+  <g fill="#3ae2ff" opacity=".5">
+    <rect x="238" y="70" width="5" height="7"/><rect x="540" y="58" width="5" height="7"/><rect x="700" y="82" width="5" height="7"/><rect x="1010" y="68" width="5" height="7"/><rect x="430" y="88" width="5" height="7"/><rect x="1290" y="108" width="5" height="7"/>
+  </g>
+</svg>
 <div class="wrap">
+  <nav>
+    <div class="logo"><span class="mark">0D</span>0DayCat DeFi</div>
+    <div class="navlinks">
+      <a href="https://arena.mainnet.romeprotocol.xyz/apps/0daycat-rome-token" target="_blank" rel="noopener">Arena</a>
+      <a href="https://github.com/dogsme/odrt-app" target="_blank" rel="noopener">Code</a>
+      <a href="https://via-hadrian.testnet.romeprotocol.xyz" target="_blank" rel="noopener">Explorer</a>
+      <button class="ghost" id="navConnect">Connect wallet</button>
+    </div>
+  </nav>
+
   <span class="badge"><span class="dot"></span>Rome Hadrian testnet · chain 200010 · testnet only, no real value</span>
   <h1>0DayCat <span class="grad">DeFi</span></h1>
   <p class="sub">A full DeFi suite on Rome Hadrian, the EVM running inside Solana: a constant-product AMM for
@@ -135,6 +185,15 @@
     <div class="stat"><div class="k">Total staked</div><div class="v" id="sStaked">…</div></div>
     <div class="stat"><div class="k">Reward pool</div><div class="v" id="sRewards">…</div></div>
     <div class="stat"><div class="k">Hadrian block</div><div class="v" id="sBlock">…</div></div>
+  </div>
+
+  <div class="card">
+    <div class="charthead">
+      <div class="k">ODRT / RUSD · live price chart</div>
+      <div class="chartvals">now <b id="chNow">—</b> · high <b id="chMax">—</b> · low <b id="chMin">—</b></div>
+    </div>
+    <canvas id="chart" width="840" height="190"></canvas>
+    <p class="muted" style="margin:6px 0 0">Session history sampled every 5 seconds from live pool reserves. The pool is small, so the price moves when anyone swaps.</p>
   </div>
 
   <div class="card">
@@ -158,8 +217,10 @@
     <label>From</label>
     <div class="swaprow"><select id="swFrom"><option value="A">ODRT</option><option value="B">RUSD</option></select>
     <input id="swIn" type="number" min="0" step="any" placeholder="0.0" style="flex:1"></div>
-    <div class="divider"><span class="arr">&#8645;</span></div>
-    <label style="margin-top:2px">To (estimated)</label>
+    <div class="balrow"><span class="bal" id="swBalFrom">Balance: —</span>
+    <span class="pcts"><button class="pctbtn" data-p="25">25%</button><button class="pctbtn" data-p="50">50%</button><button class="pctbtn" data-p="75">75%</button><button class="pctbtn" data-p="100">MAX</button></span></div>
+    <div class="flipwrap"><button id="btnFlip" title="Flip direction" type="button">&#8645;</button></div>
+    <label style="margin-top:6px">To (estimated)</label>
     <input id="swOut" type="text" readonly placeholder="—">
     <button class="act" id="btnSwap" disabled>Swap</button>
     <p class="note" id="swNote"></p>
@@ -171,6 +232,7 @@
     <label>Add RUSD</label><input id="lpB" type="number" min="0" step="any" placeholder="0.0">
     <button class="act" id="btnAddLp" disabled>Add liquidity</button>
     <div class="divider"><span>Your position</span></div>
+    <p class="muted" id="lpPosInfo">Connect a wallet to see your pool position.</p>
     <label>Your LP shares: <span id="lpShares">—</span></label>
     <label>Remove shares</label><input id="lpOut" type="number" min="0" step="any" placeholder="0.0">
     <button class="act" id="btnRemoveLp" disabled>Remove liquidity</button>
@@ -180,6 +242,7 @@
   <div class="card hidden" id="tab-stake">
     <div class="k">Stake ODRT · rewards 0.001 ODRT/sec split pro-rata</div>
     <div class="muted" id="stakeInfo" style="margin-top:10px">Your stake: — · Pending rewards: —</div>
+    <div class="muted" id="stExtra"></div>
     <label>Stake amount</label><input id="stAmt" type="number" min="0" step="any" placeholder="0.0">
     <button class="act" id="btnStake" disabled>Stake</button>
     <label>Unstake amount</label><input id="unAmt" type="number" min="0" step="any" placeholder="0.0">
@@ -191,6 +254,7 @@
   <div class="card hidden" id="tab-faucet">
     <div class="k">Faucet · 100 tokens per token, once per 24h</div>
     <p class="muted" id="faucetInfo">Faucet balance: —</p>
+    <p class="muted" id="faCd">Connect a wallet to see your claim cooldowns.</p>
     <button class="act" id="btnClaimO" disabled>Claim 100 ODRT</button>
     <button class="act" id="btnClaimR" disabled>Claim 100 RUSD</button>
     <p class="note" id="faNote"></p>
